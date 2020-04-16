@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Estacionamento</title>
+    <style>
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    width: 50%;
+    margin: 2rem auto;
+}
+
+div {
+    display: grid;
+    grid-template-columns: 1fr;
+    background-color: #eee;
+    padding: 0.7rem;
+}
+
+input, button {
+    width: 98%;
+    padding: 0.6rem 0.4rem;
+    margin: 0.4rem;
+}
+
+button {
+    text-decoration: none;
+    border: none;
+    display: block;
+    cursor: pointer;
+    text-align: center;
+}
+
+.success {
+    background-color: rgb(54, 80, 231);
+    color: rgb(255, 255, 255);
+}
+
+.delete {
+    background-color: rgb(231, 54, 54);
+    color: rgb(255, 255, 255);
+}
+
+
+table {
+    background-color: #eee;
+    margin-top: .9rem;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    padding: 5px 25px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+    </style>
+</head>
+<body>
+    <div>
+        <input type="text" id="name" placeholder="Nome do veículo" autocomplete="off">
+        <input type="text" id="licence" placeholder="Placa do veículo" autocomplete="off">
+        <button id="send" class="success">Registrar</button>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Veículo</th>
+                <th>Placa</th>
+                <th>Entrada</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody id="garage"></tbody>
+    </table>
+</body>
+
+<script>
+    (function(){
+    const $ = q => document.querySelector(q);
+
+    function convertPeriod(mil) {
+        var min = Math.floor(mil / 60000);
+        var sec = Math.floor((mil % 60000) / 1000);
+        return `${min}m e ${sec}s`;
+    };
+
+    function renderGarage () {
+        const garage = getGarage();
+        $("#garage").innerHTML = "";
+        garage.forEach(c => addCarToGarage(c))
+    };
+
+    function addCarToGarage (car) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${car.name}</td>
+            <td>${car.licence}</td>
+            <td data-time="${car.time}">
+                ${new Date(car.time)
+                        .toLocaleString('pt-BR', { 
+                            hour: 'numeric', minute: 'numeric' 
+                })}
+            </td>
+            <td>
+                <button class="delete">x</button>
+            </td>
+        `;
+
+        $("#garage").appendChild(row);
+    };
+
+    function checkOut(info) {
+        let period = new Date() - new Date(info[2].dataset.time);
+        period = convertPeriod(period);
+
+        const licence = info[1].textContent;
+        const msg = `O veículo ${info[0].textContent} de placa ${licence} permaneceu ${period} estacionado. \n\n Deseja encerrar?`;
+
+        if(!confirm(msg)) return;
+        
+        const garage = getGarage().filter(c => c.licence !== licence);
+        localStorage.garage = JSON.stringify(garage);
+        
+        renderGarage();
+    };
+
+    const getGarage = () => localStorage.garage ? JSON.parse(localStorage.garage) : [];
+
+    renderGarage();
+    $("#send").addEventListener("click", e => {
+        const name = $("#name").value;
+        const licence = $("#licence").value;
+
+        if(!name || !licence){
+            alert("Os campos são obrigatórios.");
+            return;
+        }   
+
+        const card = { name, licence, time: new Date() };
+
+        const garage = getGarage();
+        garage.push(card);
+
+        localStorage.garage = JSON.stringify(garage);
+
+        addCarToGarage(card);
+        $("#name").value = "";
+        $("#licence").value = "";
+    });
+
+    $("#garage").addEventListener("click", (e) => {
+        if(e.target.className === "delete")
+            checkOut(e.target.parentElement.parentElement.cells);
+    });
+})()
+</script>
+</html>
